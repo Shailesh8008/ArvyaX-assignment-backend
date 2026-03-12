@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
@@ -7,6 +9,14 @@ from app.schemas import AuthSuccessResponse, AuthUserResponse, JournalEntry, Use
 from app.services.auth import create_session_token, hash_password, normalize_email, utc_now, verify_password
 
 router = APIRouter(prefix="/api", tags=["auth"])
+
+
+def _journal_sort_key(entry: dict) -> datetime:
+    created_at = entry.get("createdAt")
+    if isinstance(created_at, datetime):
+        return created_at
+
+    return datetime.min.replace(tzinfo=timezone.utc)
 
 def _serialize_user(document: dict) -> AuthUserResponse:
     return AuthUserResponse(
@@ -37,7 +47,7 @@ def _get_user_journals(user_id: str) -> list[JournalEntry]:
     if bucket and isinstance(bucket.get("entries"), list):
         entries = sorted(
             [entry for entry in bucket["entries"] if isinstance(entry, dict)],
-            key=lambda entry: entry.get("createdAt"),
+            key=_journal_sort_key,
             reverse=True,
         )
         return [

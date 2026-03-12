@@ -11,6 +11,8 @@ MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "journal_service")
 MONGODB_JOURNAL_COLLECTION = os.getenv("MONGODB_JOURNAL_COLLECTION", "journal_entries")
 MONGODB_USER_COLLECTION = os.getenv("MONGODB_USER_COLLECTION", "users")
 MONGODB_SESSION_COLLECTION = os.getenv("MONGODB_SESSION_COLLECTION", "sessions")
+MONGODB_RATE_LIMIT_COLLECTION = os.getenv("MONGODB_RATE_LIMIT_COLLECTION", "rate_limits")
+MONGODB_ANALYSIS_CACHE_COLLECTION = os.getenv("MONGODB_ANALYSIS_CACHE_COLLECTION", "analysis_cache")
 
 _client: Optional[MongoClient] = None
 _database: Optional[Database] = None
@@ -42,6 +44,21 @@ def initialize_database() -> None:
     _database[MONGODB_SESSION_COLLECTION].create_index(
         [("userId", ASCENDING), ("createdAt", DESCENDING)],
         name="session_user_created_at_idx",
+    )
+    _database[MONGODB_RATE_LIMIT_COLLECTION].create_index(
+        [("userId", ASCENDING), ("scope", ASCENDING), ("windowStart", ASCENDING)],
+        name="rate_limit_user_scope_window_idx",
+        unique=True,
+    )
+    _database[MONGODB_RATE_LIMIT_COLLECTION].create_index(
+        [("expiresAt", ASCENDING)],
+        name="rate_limit_expires_at_ttl_idx",
+        expireAfterSeconds=0,
+    )
+    _database[MONGODB_ANALYSIS_CACHE_COLLECTION].create_index(
+        [("textHash", ASCENDING)],
+        name="analysis_cache_text_hash_idx",
+        unique=True,
     )
 
 
@@ -75,3 +92,17 @@ def get_session_collection() -> Collection:
         raise RuntimeError("Database is not initialized. Call initialize_database() first.")
 
     return _database[MONGODB_SESSION_COLLECTION]
+
+
+def get_rate_limit_collection() -> Collection:
+    if _database is None:
+        raise RuntimeError("Database is not initialized. Call initialize_database() first.")
+
+    return _database[MONGODB_RATE_LIMIT_COLLECTION]
+
+
+def get_analysis_cache_collection() -> Collection:
+    if _database is None:
+        raise RuntimeError("Database is not initialized. Call initialize_database() first.")
+
+    return _database[MONGODB_ANALYSIS_CACHE_COLLECTION]

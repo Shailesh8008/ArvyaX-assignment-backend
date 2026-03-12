@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -54,8 +55,10 @@ class JournalCreate(BaseModel):
 
 class JournalAnalyzeRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000)
+    journal_id: Optional[str] = Field(default=None, alias="journalId", max_length=255)
 
     model_config = ConfigDict(
+        populate_by_name=True,
         str_strip_whitespace=True,
     )
 
@@ -64,6 +67,22 @@ class JournalAnalysisResponse(BaseModel):
     emotion: str
     keywords: list[str]
     summary: str
+    cached: bool = False
+
+
+class JournalInsightsResponse(BaseModel):
+    total_entries: int = Field(..., alias="totalEntries")
+    top_emotion: str = Field(..., alias="topEmotion")
+    most_used_ambience: str = Field(..., alias="mostUsedAmbience")
+    recent_keywords: list[str] = Field(..., alias="recentKeywords")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class JournalAnalysisLookupResponse(BaseModel):
+    ok: bool
+    analysis: Optional["JournalAnalysisResponse"] = None
+    message: Optional[str] = None
 
 
 class JournalEntry(BaseModel):

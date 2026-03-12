@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from app.db import get_journal_collection, get_session_collection, get_user_collection
 from app.middleware.auth import SESSION_COOKIE_NAME
 from app.schemas import AuthSuccessResponse, AuthUserResponse, JournalEntry, UserLoginRequest, UserRegisterRequest
+from app.settings import settings
 from app.services.auth import create_session_token, hash_password, normalize_email, utc_now, verify_password
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -75,7 +76,7 @@ def _set_session_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=settings.session_cookie_secure,
         max_age=60 * 60 * 24 * 30,
     )
 
